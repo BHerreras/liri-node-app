@@ -25,7 +25,7 @@ if (command === "movie-this")
 	} else {
 		movieName = "Mr. Nobody";
 	}
-//Handles Movie names with spaces
+//Handles names with spaces
 movieName = movieName.replace(' ', '+');
 
 var queryUrl = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=short&apikey=trilogy";
@@ -41,13 +41,13 @@ request(queryUrl, function (error, response, body) {
 	console.log('Rotten Tomatoes Rating:', JSON.parse(body).Ratings[1].Value);
 	console.log('Plot Summary:', JSON.parse(body).Plot);
 	console.log('Actors:', JSON.parse(body).Actors);
+	console.log("----------------------");
 });
-
+//----------------------------------------------------------------------------
+// Takes a command and displays tweets
 if (command === "my-tweets") {
 
 	var params = {
-
-		count: 20
 	};
 
 	client.get('statuses/user_timeline', params, function (error, tweet, response) {
@@ -70,6 +70,8 @@ if (command === "my-tweets") {
 	});
 
 }
+//-------------------------------------------------------------------------
+// Takes a command and searches Spotify and displays song info..
 else if (command === "spotify-this-song") {
 
 	var song = value;
