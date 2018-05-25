@@ -4,92 +4,134 @@ var request = require('request');
 var Spotify = require('node-spotify-api');
 var Twitter = require('twitter');
 var fs = require("fs");
-var keys = require('./keys.js');
+var keys = require('./keys');
 
 //required keys for spotify & twitter
 var spotify = new Spotify(keys.spotify);
 var client = new Twitter(keys.twitter);
+// FUNCTIONS
+// =====================================
 
-//These args determine which function to run 
-var command = process.argv[2];
-var value = process.argv[3];
+// Writes to the log.txt file
+var getArtistNames = function (artist) {
+	return artist.name;
+};
 
-
-
-// --------------------------------------------------------------------------------
-// Uses request to query OMDB API
-if (command === "movie-this")
-	//Provide a default search value if user does not define
-	if (value != undefined) {
-		var movieName = value;
-	} else {
-		movieName = "Mr. Nobody";
+// Function for running a Spotify search
+var getMeSpotify = function (songName) {
+	if (songName === undefined) {
+		songName = "What's my age again";
 	}
-//Handles names with spaces
-movieName = movieName.replace(' ', '+');
 
-var queryUrl = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=short&apikey=trilogy";
+	spotify.search(
+		{
+			type: "track",
+			query: songName
+		},
+		function (err, data) {
+			if (err) {
+				console.log("Error occurred: " + err);
+				return;
+			}
 
-request(queryUrl, function (error, response, body) {
+			var songs = data.tracks.items;
 
-	console.log("----------------------");
-	console.log('Movie Title:', JSON.parse(body).Title);
-	console.log('Release Year:', JSON.parse(body).Year);
-	console.log('IMDB Rating:', JSON.parse(body).Ratings[0].Value);
-	console.log('Country:', JSON.parse(body).Country);
-	console.log('Language:', JSON.parse(body).Language);
-	console.log('Rotten Tomatoes Rating:', JSON.parse(body).Ratings[1].Value);
-	console.log('Plot Summary:', JSON.parse(body).Plot);
-	console.log('Actors:', JSON.parse(body).Actors);
-	console.log("----------------------");
-});
-//----------------------------------------------------------------------------
-// Takes a command and displays tweets
-if (command === "my-tweets") {
+			for (var i = 0; i < songs.length; i++) {
+				console.log(i);
+				console.log("artist(s): " + songs[i].artists.map(getArtistNames));
+				console.log("song name: " + songs[i].name);
+				console.log("preview song: " + songs[i].preview_url);
+				console.log("album: " + songs[i].album.name);
+				console.log("-----------------------------------");
+			}
+		}
+	);
+};
+
+// Function for running a Twitter Search
+var getMyTweets = function () {
+	var client = new Twitter(keys.twitter);
 
 	var params = {
+		screen_name: "cnn"
 	};
-
-	client.get('statuses/user_timeline', params, function (error, tweet, response) {
-
+	client.get("statuses/user_timeline", params, function (error, tweets, response) {
 		if (!error) {
-
-			var posts;
-
-			for (posts in tweet) {
-
-				console.log("-------------------------------------------------------------------");
-
-				console.log("Tweet: " + tweet[posts].text);
-
-				console.log("-------------------------------------------------------------------");
-			};
-
-		};
-
-	});
-
-}
-//-------------------------------------------------------------------------
-// Takes a command and searches Spotify and displays song info..
-else if (command === "spotify-this-song") {
-
-	var song = value;
-
-
-
-
-	spotify.search({ type: 'track', query: song }, function (err, data) {
-		if (err) {
-			return console.log('Error occurred: ' + err);
+			for (var i = 0; i < tweets.length; i++) {
+				console.log(tweets[i].created_at);
+				console.log("");
+				console.log(tweets[i].text);
+			}
 		}
-		console.log(data.tracks.href);
-		console.log(data.tracks.items[0].name);
-		console.log(data.tracks.items[0].artists[0].name);
-
-
 	});
+};
 
+// Function for running a Movie Search
+var getMeMovie = function (movieName) {
+	if (movieName === undefined) {
+		movieName = "Mr Nobody";
+	}
 
+	var urlHit = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=full&tomatoes=true&apikey=trilogy";
 
-}
+	request(urlHit, function (error, response, body) {
+		if (!error && response.statusCode === 200) {
+			var jsonData = JSON.parse(body);
+
+			console.log("Title: " + jsonData.Title);
+			console.log("Year: " + jsonData.Year);
+			console.log("Rated: " + jsonData.Rated);
+			console.log("IMDB Rating: " + jsonData.imdbRating);
+			console.log("Country: " + jsonData.Country);
+			console.log("Language: " + jsonData.Language);
+			console.log("Plot: " + jsonData.Plot);
+			console.log("Actors: " + jsonData.Actors);
+			console.log("Rotten Tomatoes Rating: " + jsonData.Ratings[1].Value);
+		}
+	});
+};
+
+// Function for running a command based on text file
+var doWhatItSays = function () {
+	fs.readFile("random.txt", "utf8", function (error, data) {
+		console.log(data);
+
+		var dataArr = data.split(",");
+
+		if (dataArr.length === 2) {
+			pick(dataArr[0], dataArr[1]);
+		}
+		else if (dataArr.length === 1) {
+			pick(dataArr[0]);
+		}
+	});
+};
+
+// Function for determining which command is executed
+var pick = function (caseData, functionData) {
+	switch (caseData) {
+		case "my-tweets":
+			getMyTweets();
+			break;
+		case "spotify-this-song":
+			getMeSpotify(functionData);
+			break;
+		case "movie-this":
+			getMeMovie(functionData);
+			break;
+		case "do-what-it-says":
+			doWhatItSays();
+			break;
+		default:
+			console.log("LIRI doesn't know that");
+	}
+};
+
+// Function which takes in command line arguments and executes correct function accordingly
+var runThis = function (argOne, argTwo) {
+	pick(argOne, argTwo);
+};
+
+// MAIN PROCESS
+// =====================================
+runThis(process.argv[2], process.argv[3]);
